@@ -1,4 +1,4 @@
-# Zappy Client (React + Vite)
+# Kahoot-style Client (React + Vite)
 
 ## Env
 Create a `.env` file in the client folder if needed:

@@ -1408,11 +1408,777 @@
 
 
 
+// import { Box, Card, Typography, Button, Divider } from "@mui/material";
+// import { useEffect, useMemo, useState } from "react";
+// import { useParams, useSearchParams, Link } from "react-router-dom";
+// import { useSocket } from "./useSocket";
+// import { motion } from "framer-motion";
+
+// export default function PlayerGame() {
+//   const { code } = useParams();
+//   const [params] = useSearchParams();
+//   const name = useMemo(() => params.get("name") || "Player", [params]);
+//   const socket = useSocket();
+
+//   const [state, setState] = useState({ phase: "lobby", leaderboard: [] });
+//   const [selectedAnswers, setSelectedAnswers] = useState([]);
+//   const [selectedRadioAnswer, setSelectedRadioAnswer] = useState(null);
+//   const [result, setResult] = useState(null);
+//   const [timer, setTimer] = useState(0);
+
+//   const emojis = ["⚡", "🎯", "🎉", "🔥", "💡", "⭐", "🎮", "🥳"];
+
+//   // --- Socket Setup ---
+//   useEffect(() => {
+//     if (!socket) return;
+//     socket.emit("player:join", { roomCode: code, name });
+
+//     const onLobby = ({ count }) => setState(prev => ({ ...prev, phase: "lobby", count }));
+//     const onStart = (q) => {
+//       setState(prev => ({ ...prev, phase: "question", q }));
+//       setSelectedAnswers([]);
+//       setSelectedRadioAnswer(null);
+//       setResult(null);
+//       const ms = q.endsAt - Date.now();
+//       setTimer(Math.ceil(ms / 1000));
+//     };
+//     const tick = setInterval(() => setTimer(t => Math.max(0, t - 1)), 1000);
+
+//     const onEnd = ({ correctIndices, leaderboard }) => setState(prev => ({ ...prev, phase: "reveal", correctIndices, leaderboard }));
+//     const onOver = ({ leaderboard }) => setState(prev => ({ ...prev, phase: "over", leaderboard }));
+//     const onAnswerRes = ({ correct }) => setResult(correct ? "✅ Correct!" : "❌ Wrong");
+//     const onLiveLeaderboard = ({ leaderboard }) => setState(prev => ({ ...prev, leaderboard }));
+
+//     socket.on("lobby:update", onLobby);
+//     socket.on("question:start", onStart);
+//     socket.on("question:end", onEnd);
+//     socket.on("game:over", onOver);
+//     socket.on("player:answer_result", onAnswerRes);
+//     socket.on("leaderboard:update", onLiveLeaderboard);
+
+//     return () => {
+//       clearInterval(tick);
+//       socket.off("lobby:update", onLobby);
+//       socket.off("question:start", onStart);
+//       socket.off("question:end", onEnd);
+//       socket.off("game:over", onOver);
+//       socket.off("player:answer_result", onAnswerRes);
+//       socket.off("leaderboard:update", onLiveLeaderboard);
+//     };
+//   }, [socket, code, name]);
+
+//   // --- Selection Handlers ---
+//   const handleCheckboxChange = (index) => {
+//     setSelectedAnswers(prev =>
+//       prev.includes(index)
+//         ? prev.filter(i => i !== index)
+//         : [...prev, index]
+//     );
+//   };
+
+//   const handleRadioChange = (event) => {
+//     setSelectedRadioAnswer(Number(event.target.value));
+//   };
+
+//   const submitAnswers = () => {
+//     const q = state.q;
+//     if (!q) return;
+
+//     if (q.hasMultipleAnswers) {
+//       if (selectedAnswers.length > 0) {
+//         const sortedAnswers = selectedAnswers.sort((a, b) => a - b);
+//         socket.emit("player:answer", { roomCode: code, choiceIndices: sortedAnswers });
+//       }
+//     } else {
+//       if (selectedRadioAnswer !== null) {
+//         socket.emit("player:answer", { roomCode: code, choiceIndices: [selectedRadioAnswer] });
+//       }
+//     }
+//   };
+
+//   const correctAnswersText = useMemo(() => {
+//     if (state.phase === "reveal" && state.q && state.correctIndices) {
+//       return state.correctIndices.map(index => state.q.choices[index]);
+//     }
+//     return [];
+//   }, [state]);
+
+//   return (
+//     <Box
+//       className="flex flex-col items-center justify-center min-h-screen relative overflow-hidden p-6"
+//       sx={{
+//         background: "linear-gradient(-45deg, #0A0A1A, #1E1B4B, #2B1E68, #4338CA)",
+//         backgroundSize: "400% 400%",
+//         animation: "gradientMove 15s ease infinite",
+//       }}
+//     >
+//       <style>
+//         {`
+//         @keyframes gradientMove {
+//           0% { background-position: 0% 50%; }
+//           50% { background-position: 100% 50%; }
+//           100% { background-position: 0% 50%; }
+//         }
+//         @keyframes pulseGlow {
+//           0% { box-shadow: 0 0 20px rgba(255,255,255,0.4); }
+//           50% { box-shadow: 0 0 40px rgba(255,255,255,0.9); }
+//           100% { box-shadow: 0 0 20px rgba(255,255,255,0.4); }
+//         }
+//         `}
+//       </style>
+
+//       {/* Floating Emojis */}
+//       {emojis.map((emoji, i) => (
+//         <motion.div
+//           key={i}
+//           className="absolute text-5xl select-none"
+//           style={{
+//             top: `${Math.random() * 90}vh`,
+//             left: `${Math.random() * 90}vw`,
+//             opacity: 0.1 + Math.random() * 0.2,
+//           }}
+//           animate={{
+//             y: [0, -25, 0],
+//             x: [0, 10, 0],
+//             rotate: [0, 8, -8, 0],
+//           }}
+//           transition={{
+//             duration: 8 + Math.random() * 4,
+//             repeat: Infinity,
+//             ease: "easeInOut",
+//           }}
+//         >
+//           {emoji}
+//         </motion.div>
+//       ))}
+
+//       {/* Live Leaderboard Panel */}
+//       {state.leaderboard?.length > 0 && (
+//         <motion.div
+//           initial={{ x: 300, opacity: 0 }}
+//           animate={{ x: 0, opacity: 1 }}
+//           transition={{ duration: 0.6 }}
+//           className="absolute right-6 top-6 z-20"
+//         >
+//           <Card
+//             className="p-4 bg-white/20 backdrop-blur-md border border-white/40"
+//             sx={{
+//               borderRadius: "16px",
+//               color: "#1E1B4B",
+//               minWidth: "220px",
+//               animation: "pulseGlow 3s infinite ease-in-out",
+//               marginTop: "40px",
+//             }}
+//           >
+//             <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, color: "#1E1B4B" }}>
+//               🏆 Live Leaderboard
+//             </Typography>
+//             <Divider sx={{ mb: 1, borderColor: "rgba(255,255,255,0.4)" }} />
+//             <ol style={{ listStyle: "none", padding: 0, margin: 0 }}>
+//               {state.leaderboard.slice(0, 5).map((p, i) => (
+//                 <li key={i} style={{
+//                   margin: "6px 0",
+//                   fontWeight: i === 0 ? 800 : 500,
+//                   color: i === 0 ? "#4C1D95" : "#1E1B4B",
+//                 }}>
+//                   {i + 1}. {p.name} — {p.score}
+//                 </li>
+//               ))}
+//             </ol>
+//           </Card>
+//         </motion.div>
+//       )}
+
+//       {/* Main Game Card */}
+//       <motion.div
+//         initial={{ opacity: 0, y: 40 }}
+//         animate={{ opacity: 1, y: 0 }}
+//         transition={{ duration: 0.8 }}
+//         className="z-10 w-full max-w-3xl"
+//       >
+//         <Card
+//           className="p-8 bg-white/10 backdrop-blur-lg border border-white/40 text-center"
+//           sx={{
+//             borderRadius: "22px",
+//             color: "#1E1B4B",
+//             animation: "pulseGlow 3s infinite ease-in-out",
+//           }}
+//         >
+//           {/* Lobby */}
+//           {/* {state.phase === "lobby" && (
+//             <Typography variant="h5" sx={{ fontWeight: 700, color: "#1E1B4B" }}>
+//               Waiting for host... 👀 Players: {state.count || 1}
+//             </Typography>
+//           )} */}
+
+//           {/* Lobby */}
+// {state.phase === "lobby" && (
+//   <Box className="text-center">
+//     <Typography
+//       variant="h4"
+//       // sx={{
+//       //   fontWeight: 700,
+//       //   color: "#5905d7ff",
+//       //   textShadow: "0 0 10px rgba(255,255,255,0.6)",
+//       //   mb: 3,
+//       // }}
+//       sx={{ mb: 3, fontWeight: 700, background: "linear-gradient(90deg, #FDE68A, #F9A8D4, #C084FC)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
+//     >
+//       Waiting for host to start the game 🎯
+//     </Typography>
+
+//     <Typography
+//       variant="h6"
+//       sx={{ mb: 3, color: "#D1D5DB", fontWeight: 500 }}
+//     >
+//       Players joined: {state.count || 1}
+//     </Typography>
+
+//     <Box className="flex flex-wrap justify-center gap-3 mt-6">
+//       {state.leaderboard?.length > 0 &&
+//         state.leaderboard.map((player, i) => (
+//           <motion.div
+//             key={player.name}
+//             initial={{ scale: 0, opacity: 0 }}
+//             animate={{ scale: 1, opacity: 1 }}
+//             transition={{ type: "spring", stiffness: 120, damping: 12 }}
+//             className="relative"
+//           >
+//             <motion.div
+//               animate={{
+//                 y: [0, -3, 0],
+//                 rotate: [0, 3, -3, 0],
+//               }}
+//               transition={{
+//                 duration: 2,
+//                 repeat: Infinity,
+//                 ease: "easeInOut",
+//               }}
+//             >
+//               <Card
+//                 sx={{
+//                   px: 3,
+//                   py: 1.5,
+//                   borderRadius: "12px",
+//                   background: "rgba(255,255,255,0.15)",
+//                   border: "1px solid rgba(255,255,255,0.4)",
+//                   boxShadow: "0 0 20px rgba(255,255,255,0.2)",
+//                   color: "#fff",
+//                   fontWeight: 600,
+//                   backdropFilter: "blur(8px)",
+//                 }}
+//               >
+//                 {player.name}
+//               </Card>
+//             </motion.div>
+
+//             {/* Confetti sparkle effect */}
+//             {[...Array(5)].map((_, j) => (
+//               <motion.span
+//                 key={j}
+//                 className="absolute text-lg select-none"
+//                 style={{
+//                   top: "50%",
+//                   left: "50%",
+//                   transform: "translate(-50%, -50%)",
+//                   color: ["#FDE68A", "#F9A8D4", "#C084FC"][j % 3],
+//                 }}
+//                 animate={{
+//                   x: [0, (Math.random() - 0.5) * 80],
+//                   y: [0, (Math.random() - 0.5) * 80],
+//                   opacity: [1, 0],
+//                   rotate: [0, 360],
+//                 }}
+//                 transition={{
+//                   duration: 1.2 + Math.random() * 0.8,
+//                   delay: Math.random() * 0.5,
+//                   repeat: Infinity,
+//                   repeatDelay: 5 + Math.random() * 3,
+//                 }}
+//               >
+//                 ✨
+//               </motion.span>
+//             ))}
+//           </motion.div>
+//         ))}
+//     </Box>
+//   </Box>
+// )}
+
+
+//           {/* Question */}
+//           {state.phase === "question" && (
+//             <Box>
+//               <Typography
+//                 variant="h5"
+//                 sx={{ mb: 3, fontWeight: 700, color: "#1E1B4B" }}
+//                 dangerouslySetInnerHTML={{ __html: state.q.text }}
+//               />
+//               <Typography variant="body2" sx={{ mb: 3, color: "#312E81" }}>
+//                 ⏳ Time left: {timer}s
+//               </Typography>
+
+//               <Box
+//                 sx={{
+//                   display: "grid",
+//                   gridTemplateColumns:
+//                     state.q.choices.some(c => c.length > 25)
+//                       ? "1fr"
+//                       : "repeat(2, 1fr)",
+//                   gap: 2,
+//                 }}
+//               >
+//                 {state.q.choices.map((choice, i) => (
+//                   <Card
+//                     key={i}
+//                     onClick={() =>
+//                       state.q.hasMultipleAnswers
+//                         ? handleCheckboxChange(i)
+//                         : setSelectedRadioAnswer(i)
+//                     }
+//                     sx={{
+//                       cursor: "pointer",
+//                       padding: 2,
+//                       borderRadius: "12px",
+//                       textAlign: "center",
+//                       fontWeight: 600,
+//                       border:
+//                         selectedAnswers.includes(i) || selectedRadioAnswer === i
+//                           ? "2px solid #4c1d95ff"
+//                           : "1px solid rgba(0,0,0,0.2)",
+//                       backgroundColor:
+//                         selectedAnswers.includes(i) || selectedRadioAnswer === i
+//                           ? "rgba(200, 180, 255, 0.3)"
+//                           : "rgba(255,255,255,0.6)",
+//                       color: "#1E1B4B",
+//                       "&:hover": {
+//                         backgroundColor: "rgba(255,255,255,0.85)",
+//                         transform: "scale(1.03)",
+//                         transition: "all 0.2s ease",
+//                       },
+//                     }}
+//                   >
+//                     {choice}
+//                   </Card>
+//                 ))}
+//               </Box>
+
+//               <Button
+//                 variant="contained"
+//                 onClick={submitAnswers}
+//                 sx={{
+//                   mt: 4,
+//                   py: 1.2,
+//                   px: 4,
+//                   borderRadius: "12px",
+//                   background: "linear-gradient(90deg,#FDE68A,#F9A8D4,#C084FC)",
+//                   color: "#1E1B4B",
+//                   fontWeight: 700,
+//                   "&:hover": {
+//                     transform: "scale(1.05)",
+//                     boxShadow: "0 0 20px rgba(255,255,255,0.6)",
+//                   },
+//                 }}
+//               >
+//                 Submit Answer
+//               </Button>
+
+//               {result && (
+//                 <Typography sx={{ mt: 3, fontSize: "1.1rem", fontWeight: 600, color: "#1E1B4B" }}>
+//                   {result}
+//                 </Typography>
+//               )}
+//             </Box>
+//           )}
+
+//           {/* Reveal / Game Over */}
+//           {state.phase === "reveal" && (
+//             <Box>
+//               <Typography variant="h5" sx={{ mb: 2, color: "#1E1B4B" }}>
+//                 ✅ Correct Answers:
+//               </Typography>
+//               <Typography sx={{ mb: 3, fontWeight: 500 }}>
+//                 {correctAnswersText.join(", ")}
+//               </Typography>
+//             </Box>
+//           )}
+//           {state.phase === "over" && (
+//             <Box>
+//               <Typography variant="h5" sx={{ color: "#1E1B4B", mb: 2 }}>
+//                 🎉 Game Over!
+//               </Typography>
+//               <ol style={{ listStyle: "none", padding: 0, color: "#1E1B4B" }}>
+//                 {state.leaderboard.map((p, i) => (
+//                   <li key={i}>{p.name} — {p.score}</li>
+//                 ))}
+//               </ol>
+//               <Button
+//                 component={Link}
+//                 to="/join"
+//                 variant="contained"
+//                 sx={{
+//                   mt: 3,
+//                   backgroundColor: "#64748B",
+//                   "&:hover": { backgroundColor: "#475569" },
+//                 }}
+//               >
+//                 Join Another
+//               </Button>
+//             </Box>
+//           )}
+//         </Card>
+//       </motion.div>
+//     </Box>
+//   );
+// }
+
+
+// import { Box, Card, Typography, Button, Divider } from "@mui/material";
+// import { useEffect, useMemo, useState } from "react";
+// import { useParams, useSearchParams, Link } from "react-router-dom";
+// import { useSocket } from "./useSocket";
+// import { motion } from "framer-motion";
+
+// export default function PlayerGame() {
+//   const { code } = useParams();
+//   const [params] = useSearchParams();
+//   const name = useMemo(() => params.get("name") || "Player", [params]);
+//   const socket = useSocket();
+
+//   const [state, setState] = useState({ phase: "lobby", leaderboard: [] });
+//   const [selectedAnswers, setSelectedAnswers] = useState([]);
+//   const [selectedRadioAnswer, setSelectedRadioAnswer] = useState(null);
+//   const [timer, setTimer] = useState(0);
+
+//   const emojis = ["⚡", "🎯", "🎉", "🔥", "💡", "⭐", "🎮", "🥳"];
+
+//   useEffect(() => {
+//     if (!socket) return;
+//     socket.emit("player:join", { roomCode: code, name });
+
+//     const onLobby = ({ count }) =>
+//       setState(prev => ({ ...prev, phase: "lobby", count }));
+
+//     const onStart = (q) => {
+//       setState(prev => ({ ...prev, phase: "question", q }));
+//       setSelectedAnswers([]);
+//       setSelectedRadioAnswer(null);
+//       const ms = q.endsAt - Date.now();
+//       setTimer(Math.ceil(ms / 1000));
+//     };
+
+//     const tick = setInterval(() => setTimer(t => Math.max(0, t - 1)), 1000);
+
+//     const onEnd = ({ correctIndices, leaderboard }) =>
+//       setState(prev => ({ ...prev, phase: "reveal", correctIndices, leaderboard }));
+
+//     const onOver = ({ leaderboard }) =>
+//       setState(prev => ({ ...prev, phase: "over", leaderboard }));
+
+//     const onLiveLeaderboard = ({ leaderboard }) =>
+//       setState(prev => ({ ...prev, leaderboard }));
+
+//     socket.on("lobby:update", onLobby);
+//     socket.on("question:start", onStart);
+//     socket.on("question:end", onEnd);
+//     socket.on("game:over", onOver);
+//     socket.on("leaderboard:update", onLiveLeaderboard);
+
+//     return () => {
+//       clearInterval(tick);
+//       socket.off("lobby:update", onLobby);
+//       socket.off("question:start", onStart);
+//       socket.off("question:end", onEnd);
+//       socket.off("game:over", onOver);
+//       socket.off("leaderboard:update", onLiveLeaderboard);
+//     };
+//   }, [socket, code, name]);
+
+//   // --- Answer Handlers ---
+//   const handleCheckboxChange = (index) => {
+//     setSelectedAnswers(prev =>
+//       prev.includes(index)
+//         ? prev.filter(i => i !== index)
+//         : [...prev, index]
+//     );
+//   };
+
+//   const handleRadioChange = (index) => setSelectedRadioAnswer(index);
+
+//   const submitAnswers = () => {
+//     const q = state.q;
+//     if (!q) return;
+//     if (q.hasMultipleAnswers && selectedAnswers.length > 0)
+//       socket.emit("player:answer", { roomCode: code, choiceIndices: selectedAnswers });
+//     else if (!q.hasMultipleAnswers && selectedRadioAnswer !== null)
+//       socket.emit("player:answer", { roomCode: code, choiceIndices: [selectedRadioAnswer] });
+//   };
+
+//   // --- Timer Bar ---
+//   const TimerBar = () => (
+//     <Box
+//       sx={{
+//         height: "14px",
+//         width: "100%",
+//         background: "rgba(255,255,255,0.25)",
+//         borderRadius: "8px",
+//         overflow: "hidden",
+//         boxShadow: "0 0 15px rgba(255,255,255,0.4)",
+//         mb: 3,
+//       }}
+//     >
+//       <motion.div
+//         animate={{
+//           width: state.q
+//             ? `${(timer / (state.q.timeLimitSec || 20)) * 100}%`
+//             : "0%",
+//         }}
+//         transition={{ duration: 1, ease: "linear" }}
+//         style={{
+//           height: "100%",
+//           background:
+//             "linear-gradient(90deg,#fde68a,#f9a8d4,#c084fc)",
+//           borderRadius: "8px",
+//           boxShadow: "0 0 20px rgba(255,255,255,0.8)",
+//         }}
+//       />
+//     </Box>
+//   );
+
+//   return (
+//     <Box
+//       className="flex flex-col items-center justify-center min-h-screen relative overflow-hidden p-6"
+//       sx={{
+//         background: "radial-gradient(circle at 20% 30%, #7E22CE, #4C1D95, #1E1B4B)",
+//       }}
+//     >
+//       {/* Floating Emojis */}
+//       {emojis.map((emoji, i) => (
+//         <motion.div
+//           key={i}
+//           className="absolute text-5xl select-none"
+//           style={{
+//             top: `${Math.random() * 90}vh`,
+//             left: `${Math.random() * 90}vw`,
+//             opacity: 0.15 + Math.random() * 0.3,
+//           }}
+//           animate={{
+//             y: [0, -20, 0],
+//             rotate: [0, 8, -8, 0],
+//           }}
+//           transition={{
+//             duration: 8 + Math.random() * 3,
+//             repeat: Infinity,
+//             ease: "easeInOut",
+//           }}
+//         >
+//           {emoji}
+//         </motion.div>
+//       ))}
+
+//       {/* Leaderboard (Right Floating) */}
+//       {state.leaderboard?.length > 0 && (
+//         <motion.div
+//           initial={{ x: 300, opacity: 0 }}
+//           animate={{ x: 0, opacity: 1 }}
+//           transition={{ duration: 0.6 }}
+//           className="absolute right-6 top-6 z-20"
+//         >
+//           <Card
+//             className="p-4 bg-white/20 backdrop-blur-md border border-white/40"
+//             sx={{
+//               borderRadius: "16px",
+//               color: "#1E1B4B",
+//               animation: "pulseGlow 3s infinite ease-in-out",
+//               minWidth: "220px",
+//             }}
+//           >
+//             <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+//               🏆 Live Leaderboard
+//             </Typography>
+//             <Divider sx={{ mb: 1, borderColor: "rgba(255,255,255,0.3)" }} />
+//             <ol style={{ listStyle: "none", padding: 0, margin: 0 }}>
+//               {state.leaderboard.slice(0, 5).map((p, i) => (
+//                 <li key={i} style={{
+//                   margin: "6px 0",
+//                   fontWeight: i === 0 ? 800 : 500,
+//                   color: i === 0 ? "#1E1B4B" : "#e0e0ff",
+//                 }}>
+//                   {i + 1}. {p.name} — {p.score}
+//                 </li>
+//               ))}
+//             </ol>
+//           </Card>
+//         </motion.div>
+     
+//       )}
+
+//       {/* Main Card */}
+//       <motion.div
+//         initial={{ opacity: 0, y: 40 }}
+//         animate={{ opacity: 1, y: 0 }}
+//         transition={{ duration: 0.8 }}
+//         className="z-10 w-full max-w-3xl"
+//       >
+//         <Card
+//           className="p-8 bg-white/10 backdrop-blur-lg border border-white/40 text-center shadow-[0_0_25px_rgba(255,255,255,0.3)]"
+//           sx={{
+//             borderRadius: "22px",
+//             animation: "pulseGlow 3s infinite ease-in-out",
+//           }}
+//         >
+//           {/* Lobby */}
+//           {state.phase === "lobby" && (
+//             <Typography variant="h4" sx={{
+//               fontWeight: 700,
+//               background:
+//                 "linear-gradient(90deg,#FDE68A,#F9A8D4,#C084FC)",
+//               WebkitBackgroundClip: "text",
+//               WebkitTextFillColor: "transparent",
+//             }}>
+//               Waiting for host to start 🎯
+//             </Typography>
+//           )}
+
+//           {/* Question */}
+//           {state.phase === "question" && (
+//             <Box>
+//               <Typography
+//                 variant="h5"
+//                 sx={{
+//                   mb: 2,
+//                   fontWeight: 700,
+//                   color: "#1E1B4B",
+//                   textShadow: "0 0 10px rgba(255,255,255,0.5)",
+//                 }}
+//                 dangerouslySetInnerHTML={{ __html: state.q.text }}
+//               />
+//               <TimerBar />
+//               <Typography variant="body2" sx={{ mb: 3, color: "#e0e0ff" }}>
+//                 ⏳ {timer}s left
+//               </Typography>
+
+//               <Box
+//                 sx={{
+//                   display: "grid",
+//                   gridTemplateColumns:
+//                     state.q.choices.some(c => c.length > 25)
+//                       ? "1fr"
+//                       : "repeat(2, 1fr)",
+//                   gap: 2,
+//                 }}
+//               >
+//                 {state.q.choices.map((choice, i) => (
+//                   <Card
+//                     key={i}
+//                     onClick={() =>
+//                       state.q.hasMultipleAnswers
+//                         ? handleCheckboxChange(i)
+//                         : handleRadioChange(i)
+//                     }
+//                     sx={{
+//                       cursor: "pointer",
+//                       p: 2,
+//                       borderRadius: "12px",
+//                       textAlign: "center",
+//                       fontWeight: 600,
+//                       border:
+//                         selectedAnswers.includes(i) ||
+//                         selectedRadioAnswer === i
+//                           ? "2px solid #FDE68A"
+//                           : "1px solid rgba(255,255,255,0.3)",
+//                       backgroundColor:
+//                         selectedAnswers.includes(i) ||
+//                         selectedRadioAnswer === i
+//                           ? "rgba(255,255,255,0.3)"
+//                           : "rgba(255,255,255,0.15)",
+//                       color: "#22236cff",
+//                       "&:hover": {
+//                         backgroundColor: "rgba(255,255,255,0.25)",
+//                         transform: "scale(1.04)",
+//                       },
+//                     }}
+//                   >
+//                     {choice}
+//                   </Card>
+//                 ))}
+//               </Box>
+
+//               <Button
+//                 variant="contained"
+//                 onClick={submitAnswers}
+//                 sx={{
+//                   mt: 4,
+//                   py: 1.2,
+//                   px: 4,
+//                   borderRadius: "12px",
+//                   background:
+//                     "linear-gradient(90deg,#FDE68A,#F9A8D4,#C084FC)",
+//                   color: "#1E1B4B",
+//                   fontWeight: 700,
+//                   "&:hover": {
+//                     transform: "scale(1.05)",
+//                     boxShadow: "0 0 25px rgba(255,255,255,0.6)",
+//                   },
+//                 }}
+//               >
+//                 Submit Answer
+//               </Button>
+//             </Box>
+//           )}
+
+//           {/* Reveal */}
+//           {state.phase === "reveal" && (
+//             <Box>
+//               <Typography variant="h5" sx={{ mb: 2, color: "#1E1B4B" }}>
+//                 ✅ Correct Answer(s):
+//               </Typography>
+//               <Typography sx={{ mb: 3, color: "#fde68a" }}>
+//                 {state.correctIndices?.map(
+//                   (i) => state.q.choices[i]
+//                 ).join(", ")}
+//               </Typography>
+//             </Box>
+//           )}
+
+//           {/* Game Over */}
+//           {state.phase === "over" && (
+//             <Box>
+//               <Typography variant="h5" sx={{ color: "#1E1B4B", mb: 2 }}>
+//                 🎉 Game Over!
+//               </Typography>
+//               <ol style={{ listStyle: "none", padding: 0, color: "#1E1B4B" }}>
+//                 {state.leaderboard.map((p, i) => (
+//                   <li key={i}>{p.name} — {p.score}</li>
+//                 ))}
+//               </ol>
+//               <Button
+//                 component={Link}
+//                 to="/join"
+//                 variant="contained"
+//                 sx={{
+//                   mt: 3,
+//                   backgroundColor: "#64748B",
+//                   "&:hover": { backgroundColor: "#475569" },
+//                 }}
+//               >
+//                 Join Another
+//               </Button>
+//             </Box>
+//           )}
+//         </Card>
+//       </motion.div>
+//     </Box>
+//   );
+// }
+
+
 import { Box, Card, Typography, Button, Divider } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams, Link } from "react-router-dom";
 import { useSocket } from "./useSocket";
 import { motion } from "framer-motion";
+import Leaderboard from "./components/Leaderboard";
 
 export default function PlayerGame() {
   const { code } = useParams();
@@ -1423,37 +2189,47 @@ export default function PlayerGame() {
   const [state, setState] = useState({ phase: "lobby", leaderboard: [] });
   const [selectedAnswers, setSelectedAnswers] = useState([]);
   const [selectedRadioAnswer, setSelectedRadioAnswer] = useState(null);
-  const [result, setResult] = useState(null);
   const [timer, setTimer] = useState(0);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
   const emojis = ["⚡", "🎯", "🎉", "🔥", "💡", "⭐", "🎮", "🥳"];
 
-  // --- Socket Setup ---
   useEffect(() => {
     if (!socket) return;
     socket.emit("player:join", { roomCode: code, name });
 
-    const onLobby = ({ count }) => setState(prev => ({ ...prev, phase: "lobby", count }));
+    const onLobby = ({ count }) =>
+      setState((prev) => ({ ...prev, phase: "lobby", count }));
+
     const onStart = (q) => {
-      setState(prev => ({ ...prev, phase: "question", q }));
+      setState((prev) => ({ ...prev, phase: "question", q }));
       setSelectedAnswers([]);
       setSelectedRadioAnswer(null);
-      setResult(null);
+      setHasSubmitted(false);
       const ms = q.endsAt - Date.now();
       setTimer(Math.ceil(ms / 1000));
     };
-    const tick = setInterval(() => setTimer(t => Math.max(0, t - 1)), 1000);
 
-    const onEnd = ({ correctIndices, leaderboard }) => setState(prev => ({ ...prev, phase: "reveal", correctIndices, leaderboard }));
-    const onOver = ({ leaderboard }) => setState(prev => ({ ...prev, phase: "over", leaderboard }));
-    const onAnswerRes = ({ correct }) => setResult(correct ? "✅ Correct!" : "❌ Wrong");
-    const onLiveLeaderboard = ({ leaderboard }) => setState(prev => ({ ...prev, leaderboard }));
+    const tick = setInterval(() => setTimer((t) => Math.max(0, t - 1)), 1000);
+
+    const onEnd = ({ correctIndices, leaderboard }) =>
+      setState((prev) => ({
+        ...prev,
+        phase: "reveal",
+        correctIndices,
+        leaderboard,
+      }));
+
+    const onOver = ({ leaderboard }) =>
+      setState((prev) => ({ ...prev, phase: "over", leaderboard }));
+
+    const onLiveLeaderboard = ({ leaderboard }) =>
+      setState((prev) => ({ ...prev, leaderboard }));
 
     socket.on("lobby:update", onLobby);
     socket.on("question:start", onStart);
     socket.on("question:end", onEnd);
     socket.on("game:over", onOver);
-    socket.on("player:answer_result", onAnswerRes);
     socket.on("leaderboard:update", onLiveLeaderboard);
 
     return () => {
@@ -1462,72 +2238,97 @@ export default function PlayerGame() {
       socket.off("question:start", onStart);
       socket.off("question:end", onEnd);
       socket.off("game:over", onOver);
-      socket.off("player:answer_result", onAnswerRes);
       socket.off("leaderboard:update", onLiveLeaderboard);
     };
   }, [socket, code, name]);
 
-  // --- Selection Handlers ---
   const handleCheckboxChange = (index) => {
-    setSelectedAnswers(prev =>
+    if (hasSubmitted) return;
+    setSelectedAnswers((prev) =>
       prev.includes(index)
-        ? prev.filter(i => i !== index)
+        ? prev.filter((i) => i !== index)
         : [...prev, index]
     );
   };
 
-  const handleRadioChange = (event) => {
-    setSelectedRadioAnswer(Number(event.target.value));
+  const handleRadioChange = (index) => {
+    if (hasSubmitted) return;
+    setSelectedRadioAnswer(index);
   };
 
   const submitAnswers = () => {
     const q = state.q;
-    if (!q) return;
+    if (!q || hasSubmitted) return;
 
-    if (q.hasMultipleAnswers) {
-      if (selectedAnswers.length > 0) {
-        const sortedAnswers = selectedAnswers.sort((a, b) => a - b);
-        socket.emit("player:answer", { roomCode: code, choiceIndices: sortedAnswers });
-      }
-    } else {
-      if (selectedRadioAnswer !== null) {
-        socket.emit("player:answer", { roomCode: code, choiceIndices: [selectedRadioAnswer] });
-      }
+    if (q.hasMultipleAnswers && selectedAnswers.length > 0) {
+      socket.emit("player:answer", {
+        roomCode: code,
+        choiceIndices: selectedAnswers,
+      });
+      setHasSubmitted(true);
+    } else if (!q.hasMultipleAnswers && selectedRadioAnswer !== null) {
+      socket.emit("player:answer", {
+        roomCode: code,
+        choiceIndices: [selectedRadioAnswer],
+      });
+      setHasSubmitted(true);
     }
   };
 
-  const correctAnswersText = useMemo(() => {
-    if (state.phase === "reveal" && state.q && state.correctIndices) {
-      return state.correctIndices.map(index => state.q.choices[index]);
-    }
-    return [];
-  }, [state]);
+  // --- Timer Bar ---
+  const TimerBar = () => (
+    <Box
+      sx={{
+        height: "14px",
+        width: "100%",
+        background: "rgba(255,255,255,0.25)",
+        borderRadius: "8px",
+        overflow: "hidden",
+        boxShadow: "0 0 15px rgba(255,255,255,0.4)",
+        mb: 3,
+      }}
+    >
+      <motion.div
+        animate={{
+          width: state.q
+            ? `${(timer / (state.q.timeLimitSec || 20)) * 100}%`
+            : "0%",
+          background:
+            timer <= 5
+              ? "linear-gradient(90deg,#ef4444,#f97316,#fde68a)"
+              : "linear-gradient(90deg,#fde68a,#f9a8d4,#c084fc)",
+        }}
+        transition={{ duration: 1, ease: "linear" }}
+        style={{
+          height: "100%",
+          borderRadius: "8px",
+          boxShadow:
+            timer <= 5
+              ? "0 0 25px rgba(239,68,68,0.8)"
+              : "0 0 20px rgba(255,255,255,0.8)",
+        }}
+      />
+    </Box>
+  );
 
   return (
     <Box
-      className="flex flex-col items-center justify-center min-h-screen relative overflow-hidden p-6"
+      className="flex flex-col items-center justify-center min-h-screen relative overflow-hidden p-4 md:p-6"
       sx={{
-        background: "linear-gradient(-45deg, #0A0A1A, #1E1B4B, #2B1E68, #4338CA)",
-        backgroundSize: "400% 400%",
-        animation: "gradientMove 15s ease infinite",
+        background:
+          "radial-gradient(circle at 20% 30%, #7E22CE, #4C1D95, #1E1B4B)",
       }}
     >
       <style>
         {`
-        @keyframes gradientMove {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
         @keyframes pulseGlow {
-          0% { box-shadow: 0 0 20px rgba(255,255,255,0.4); }
-          50% { box-shadow: 0 0 40px rgba(255,255,255,0.9); }
-          100% { box-shadow: 0 0 20px rgba(255,255,255,0.4); }
+          0% { box-shadow: 0 0 10px rgba(253,230,138,0.3); }
+          50% { box-shadow: 0 0 25px rgba(249,168,212,0.8); }
+          100% { box-shadow: 0 0 10px rgba(253,230,138,0.3); }
         }
-        `}
+      `}
       </style>
 
-      {/* Floating Emojis */}
       {emojis.map((emoji, i) => (
         <motion.div
           key={i}
@@ -1535,15 +2336,14 @@ export default function PlayerGame() {
           style={{
             top: `${Math.random() * 90}vh`,
             left: `${Math.random() * 90}vw`,
-            opacity: 0.1 + Math.random() * 0.2,
+            opacity: 0.15 + Math.random() * 0.3,
           }}
           animate={{
-            y: [0, -25, 0],
-            x: [0, 10, 0],
+            y: [0, -20, 0],
             rotate: [0, 8, -8, 0],
           }}
           transition={{
-            duration: 8 + Math.random() * 4,
+            duration: 8 + Math.random() * 3,
             repeat: Infinity,
             ease: "easeInOut",
           }}
@@ -1552,44 +2352,48 @@ export default function PlayerGame() {
         </motion.div>
       ))}
 
-      {/* Live Leaderboard Panel */}
+      {/* Leaderboard
       {state.leaderboard?.length > 0 && (
         <motion.div
           initial={{ x: 300, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.6 }}
-          className="absolute right-6 top-6 z-20"
+          className="absolute right-4 md:right-6 top-4 md:top-6 z-20"
+           style={{ top: "100px" }}
         >
           <Card
-            className="p-4 bg-white/20 backdrop-blur-md border border-white/40"
+            className="p-3 md:p-4 bg-white/20 backdrop-blur-md border border-white/40"
             sx={{
               borderRadius: "16px",
               color: "#1E1B4B",
-              minWidth: "220px",
               animation: "pulseGlow 3s infinite ease-in-out",
-              marginTop: "40px",
+              minWidth: "180px",
             }}
           >
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, color: "#1E1B4B" }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, fontSize: { xs: "1rem", md: "1.25rem" } }}>
               🏆 Live Leaderboard
             </Typography>
-            <Divider sx={{ mb: 1, borderColor: "rgba(255,255,255,0.4)" }} />
+            <Divider sx={{ mb: 1, borderColor: "rgba(255,255,255,0.3)" }} />
             <ol style={{ listStyle: "none", padding: 0, margin: 0 }}>
               {state.leaderboard.slice(0, 5).map((p, i) => (
-                <li key={i} style={{
-                  margin: "6px 0",
-                  fontWeight: i === 0 ? 800 : 500,
-                  color: i === 0 ? "#4C1D95" : "#1E1B4B",
-                }}>
+                <li
+                  key={i}
+                  style={{
+                    margin: "6px 0",
+                    fontWeight: i === 0 ? 800 : 500,
+                    color: i === 0 ? "#171d35ff" : "#1f1f47ff",
+                    fontSize: i === 0 ? "1rem" : "0.875rem",
+                  }}
+                >
                   {i + 1}. {p.name} — {p.score}
                 </li>
               ))}
             </ol>
           </Card>
-        </motion.div>
-      )}
+        </motion.div> */
+      /* )} */}
 
-      {/* Main Game Card */}
+      {/* Main Card */}
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
@@ -1597,233 +2401,143 @@ export default function PlayerGame() {
         className="z-10 w-full max-w-3xl"
       >
         <Card
-          className="p-8 bg-white/10 backdrop-blur-lg border border-white/40 text-center"
+          className="p-4 md:p-8 bg-white/10 backdrop-blur-lg border border-white/40 text-center shadow-[0_0_25px_rgba(255,255,255,0.3)]"
           sx={{
             borderRadius: "22px",
-            color: "#1E1B4B",
             animation: "pulseGlow 3s infinite ease-in-out",
           }}
         >
-          {/* Lobby */}
-          {/* {state.phase === "lobby" && (
-            <Typography variant="h5" sx={{ fontWeight: 700, color: "#1E1B4B" }}>
-              Waiting for host... 👀 Players: {state.count || 1}
-            </Typography>
-          )} */}
-
-          {/* Lobby */}
-{state.phase === "lobby" && (
-  <Box className="text-center">
-    <Typography
-      variant="h4"
-      // sx={{
-      //   fontWeight: 700,
-      //   color: "#5905d7ff",
-      //   textShadow: "0 0 10px rgba(255,255,255,0.6)",
-      //   mb: 3,
-      // }}
-      sx={{ mb: 3, fontWeight: 700, background: "linear-gradient(90deg, #FDE68A, #F9A8D4, #C084FC)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
-    >
-      Waiting for host to start the game 🎯
-    </Typography>
-
-    <Typography
-      variant="h6"
-      sx={{ mb: 3, color: "#D1D5DB", fontWeight: 500 }}
-    >
-      Players joined: {state.count || 1}
-    </Typography>
-
-    <Box className="flex flex-wrap justify-center gap-3 mt-6">
-      {state.leaderboard?.length > 0 &&
-        state.leaderboard.map((player, i) => (
-          <motion.div
-            key={player.name}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 120, damping: 12 }}
-            className="relative"
-          >
-            <motion.div
-              animate={{
-                y: [0, -3, 0],
-                rotate: [0, 3, -3, 0],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut",
+          {state.phase === "lobby" && (
+            <Typography
+              variant="h4"
+              sx={{
+                fontWeight: 700,
+                fontSize: { xs: "1.8rem", md: "2.5rem" },
+                background:
+                  "linear-gradient(90deg,#FDE68A,#F9A8D4,#C084FC)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
               }}
             >
-              <Card
-                sx={{
-                  px: 3,
-                  py: 1.5,
-                  borderRadius: "12px",
-                  background: "rgba(255,255,255,0.15)",
-                  border: "1px solid rgba(255,255,255,0.4)",
-                  boxShadow: "0 0 20px rgba(255,255,255,0.2)",
-                  color: "#fff",
-                  fontWeight: 600,
-                  backdropFilter: "blur(8px)",
-                }}
-              >
-                {player.name}
-              </Card>
-            </motion.div>
+              Waiting for host to start 🎯
+            </Typography>
+          )}
 
-            {/* Confetti sparkle effect */}
-            {[...Array(5)].map((_, j) => (
-              <motion.span
-                key={j}
-                className="absolute text-lg select-none"
-                style={{
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  color: ["#FDE68A", "#F9A8D4", "#C084FC"][j % 3],
-                }}
-                animate={{
-                  x: [0, (Math.random() - 0.5) * 80],
-                  y: [0, (Math.random() - 0.5) * 80],
-                  opacity: [1, 0],
-                  rotate: [0, 360],
-                }}
-                transition={{
-                  duration: 1.2 + Math.random() * 0.8,
-                  delay: Math.random() * 0.5,
-                  repeat: Infinity,
-                  repeatDelay: 5 + Math.random() * 3,
-                }}
-              >
-                ✨
-              </motion.span>
-            ))}
-          </motion.div>
-        ))}
-    </Box>
-  </Box>
-)}
-
-
-          {/* Question */}
           {state.phase === "question" && (
             <Box>
               <Typography
                 variant="h5"
-                sx={{ mb: 3, fontWeight: 700, color: "#1E1B4B" }}
+                sx={{
+                  mb: 2,
+                  fontWeight: 700,
+                  color: "#1E1B4B",
+                  textShadow: "0 0 10px rgba(255,255,255,0.5)",
+                  fontSize: { xs: "1.25rem", md: "1.5rem" }
+                }}
                 dangerouslySetInnerHTML={{ __html: state.q.text }}
               />
-              <Typography variant="body2" sx={{ mb: 3, color: "#312E81" }}>
-                ⏳ Time left: {timer}s
+              <TimerBar />
+              <Typography variant="body2" sx={{ mb: 3, color: "#e0e0ff" }}>
+                ⏳ {timer}s left
               </Typography>
 
               <Box
                 sx={{
                   display: "grid",
-                  gridTemplateColumns:
-                    state.q.choices.some(c => c.length > 25)
+                  gridTemplateColumns: { xs: "1fr", md: state.q.choices.some((c) => c.length > 25)
                       ? "1fr"
-                      : "repeat(2, 1fr)",
+                      : "repeat(2, 1fr)" },
                   gap: 2,
                 }}
               >
-                {state.q.choices.map((choice, i) => (
-                  <Card
-                    key={i}
-                    onClick={() =>
-                      state.q.hasMultipleAnswers
-                        ? handleCheckboxChange(i)
-                        : setSelectedRadioAnswer(i)
-                    }
-                    sx={{
-                      cursor: "pointer",
-                      padding: 2,
-                      borderRadius: "12px",
-                      textAlign: "center",
-                      fontWeight: 600,
-                      border:
-                        selectedAnswers.includes(i) || selectedRadioAnswer === i
-                          ? "2px solid #4c1d95ff"
-                          : "1px solid rgba(0,0,0,0.2)",
-                      backgroundColor:
-                        selectedAnswers.includes(i) || selectedRadioAnswer === i
-                          ? "rgba(200, 180, 255, 0.3)"
-                          : "rgba(255,255,255,0.6)",
-                      color: "#1E1B4B",
-                      "&:hover": {
-                        backgroundColor: "rgba(255,255,255,0.85)",
-                        transform: "scale(1.03)",
-                        transition: "all 0.2s ease",
-                      },
-                    }}
-                  >
-                    {choice}
-                  </Card>
-                ))}
+                {state.q.choices.map((choice, i) => {
+                  const isSelected =
+                    selectedAnswers.includes(i) || selectedRadioAnswer === i;
+
+                  return (
+                    <Card
+                      key={i}
+                      onClick={() => {
+                        if (hasSubmitted) return;
+                        state.q.hasMultipleAnswers
+                          ? handleCheckboxChange(i)
+                          : handleRadioChange(i);
+                      }}
+                      sx={{
+                        cursor: hasSubmitted ? "not-allowed" : "pointer",
+                        p: 2,
+                        borderRadius: "12px",
+                        textAlign: "center",
+                        fontWeight: 600,
+                        border: isSelected
+                          ? "2px solid #FDE68A"
+                          : "1px solid rgba(255,255,255,0.3)",
+                        backgroundColor: isSelected
+                          ? "rgba(255,255,255,0.3)"
+                          : "rgba(255,255,255,0.15)",
+                        color: "#22236cff",
+                        opacity: hasSubmitted && !isSelected ? 0.6 : 1,
+                        animation:
+                          hasSubmitted && isSelected
+                            ? "pulseGlow 1.5s infinite ease-in-out"
+                            : "none",
+                        "&:hover": !hasSubmitted
+                          ? {
+                              backgroundColor: "rgba(255,255,255,0.25)",
+                              transform: "scale(1.04)",
+                            }
+                          : {},
+                      }}
+                    >
+                      {choice}
+                    </Card>
+                  );
+                })}
               </Box>
 
               <Button
                 variant="contained"
                 onClick={submitAnswers}
+                disabled={hasSubmitted}
                 sx={{
                   mt: 4,
                   py: 1.2,
                   px: 4,
                   borderRadius: "12px",
-                  background: "linear-gradient(90deg,#FDE68A,#F9A8D4,#C084FC)",
+                  background:
+                    "linear-gradient(90deg,#FDE68A,#F9A8D4,#C084FC)",
                   color: "#1E1B4B",
                   fontWeight: 700,
                   "&:hover": {
-                    transform: "scale(1.05)",
-                    boxShadow: "0 0 20px rgba(255,255,255,0.6)",
+                    transform: hasSubmitted ? "none" : "scale(1.05)",
+                    boxShadow: hasSubmitted
+                      ? "none"
+                      : "0 0 25px rgba(255,255,255,0.6)",
                   },
                 }}
               >
-                Submit Answer
+                {hasSubmitted ? "Answer Locked 🔒" : "Submit Answer"}
               </Button>
-
-              {result && (
-                <Typography sx={{ mt: 3, fontSize: "1.1rem", fontWeight: 600, color: "#1E1B4B" }}>
-                  {result}
-                </Typography>
-              )}
             </Box>
           )}
 
-          {/* Reveal / Game Over */}
           {state.phase === "reveal" && (
             <Box>
-              <Typography variant="h5" sx={{ mb: 2, color: "#1E1B4B" }}>
+              <Typography variant="h5" sx={{ mb: 2, color: "#1E1B4B", fontSize: { xs: "1.5rem", md: "2rem" } }}>
                 ✅ Correct Answers:
               </Typography>
-              <Typography sx={{ mb: 3, fontWeight: 500 }}>
-                {correctAnswersText.join(", ")}
+              <Typography sx={{ mb: 3, fontWeight: 500, fontSize: { xs: "1rem", md: "1.125rem" } }}>
+                {state.correctIndices
+                  ?.map((i) => state.q.choices[i])
+                  .join(", ")}
               </Typography>
+              <Leaderboard leaderboard={state.leaderboard} />
             </Box>
           )}
+
           {state.phase === "over" && (
             <Box>
-              <Typography variant="h5" sx={{ color: "#1E1B4B", mb: 2 }}>
-                🎉 Game Over!
-              </Typography>
-              <ol style={{ listStyle: "none", padding: 0, color: "#1E1B4B" }}>
-                {state.leaderboard.map((p, i) => (
-                  <li key={i}>{p.name} — {p.score}</li>
-                ))}
-              </ol>
-              <Button
-                component={Link}
-                to="/join"
-                variant="contained"
-                sx={{
-                  mt: 3,
-                  backgroundColor: "#64748B",
-                  "&:hover": { backgroundColor: "#475569" },
-                }}
-              >
-                Join Another
-              </Button>
+              <Leaderboard leaderboard={state.leaderboard} />
             </Box>
           )}
         </Card>
@@ -1831,3 +2545,5 @@ export default function PlayerGame() {
     </Box>
   );
 }
+
+

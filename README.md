@@ -1,4 +1,4 @@
-# Zappy (quiz application)
+# Kahoot Clone (MERN)
 
 ## Run Server
 ```

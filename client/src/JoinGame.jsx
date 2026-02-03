@@ -140,7 +140,7 @@ export default function JoinGame() {
       >
         <Card
           elevation={10}
-          className="p-8 bg-white/10 backdrop-blur-lg border border-white/20 shadow-[0_0_25px_rgba(255,255,255,0.15)] text-center"
+          className="p-6 md:p-8 bg-white/10 backdrop-blur-lg border border-white/20 shadow-[0_0_25px_rgba(255,255,255,0.15)] text-center"
           sx={{ borderRadius: "22px" }}
         >
           <Typography
@@ -148,6 +148,7 @@ export default function JoinGame() {
             sx={{
               fontWeight: 700,
               mb: 2,
+              fontSize: { xs: "2.2rem", md: "3rem" },
               background: "linear-gradient(90deg,#FDE68A,#F9A8D4,#C084FC)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
@@ -158,7 +159,7 @@ export default function JoinGame() {
 
           <Typography
             variant="body1"
-            sx={{ color: "rgba(15, 15, 15, 0.8)", mb: 4 }}
+            sx={{ color: "rgba(15, 15, 15, 0.8)", mb: 4, fontSize: { xs: "1rem", md: "1.125rem" } }}
           >
             Enter your code and name — the quiz arena awaits you!
           </Typography>
@@ -206,7 +207,7 @@ export default function JoinGame() {
               mt: 3,
               py: 1.4,
               fontWeight: 600,
-              fontSize: "1.1rem",
+              fontSize: { xs: "1rem", md: "1.1rem" },
               borderRadius: "12px",
               textTransform: "none",
               background: "linear-gradient(90deg,#FDE68A,#F9A8D4,#C084FC)",

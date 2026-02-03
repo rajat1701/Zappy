@@ -1179,6 +1179,180 @@
 
 
 
+// import React, { useState } from "react";
+// import { Editor } from "@tinymce/tinymce-react";
+// import { Button } from "./components/ui/button";
+// import { Input } from "./components/ui/input";
+// import { Card } from "./components/ui/card";
+// import { Checkbox } from "./components/ui/checkbox";
+// import { Plus, X } from "lucide-react";
+
+// interface Question {
+//   text: string;
+//   choices: string[];
+//   correctIndices: number[];
+//   timeLimitSec: number;
+// }
+
+// interface QuizCreatorProps {
+//   onSave: (quizData: { questions: Question[] }) => void;
+// }
+
+// export default function QuizCreator({ onSave }: QuizCreatorProps) {
+//   const [questions, setQuestions] = useState<Question[]>([]);
+//   const [currentQuestion, setCurrentQuestion] = useState<Question>({
+//     text: "",
+//     choices: ["", "", "", ""],
+//     correctIndices: [],
+//     timeLimitSec: 15,
+//   });
+
+//   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+//     const { name, value } = e.target;
+//     if (name === "timeLimitSec") {
+//       setCurrentQuestion((prev) => ({ ...prev, timeLimitSec: Number(value) }));
+//     }
+//   };
+
+//   const handleEditorChange = (content: string) => {
+//     setCurrentQuestion((prev) => ({ ...prev, text: content }));
+//   };
+
+//   const handleChoiceChange = (index: number, value: string) => {
+//     const newChoices = [...currentQuestion.choices];
+//     newChoices[index] = value;
+//     setCurrentQuestion((prev) => ({ ...prev, choices: newChoices }));
+//   };
+
+//   const toggleCorrectAnswer = (index: number) => {
+//     const { correctIndices } = currentQuestion;
+//     const newCorrectIndices = correctIndices.includes(index)
+//       ? correctIndices.filter((i) => i !== index)
+//       : [...correctIndices, index];
+//     setCurrentQuestion((prev) => ({ ...prev, correctIndices: newCorrectIndices }));
+//   };
+
+//   const addQuestion = () => {
+//     if (
+//       !currentQuestion.text ||
+//       currentQuestion.choices.some((c) => !c.trim()) ||
+//       currentQuestion.correctIndices.length === 0
+//     ) {
+//       alert("Fill in question, all choices, and select at least one correct answer.");
+//       return;
+//     }
+//     setQuestions([...questions, currentQuestion]);
+//     setCurrentQuestion({ text: "", choices: ["", "", "", ""], correctIndices: [], timeLimitSec: 15 });
+//   };
+
+//   const endQuiz = () => {
+//     const isCurrentQuestionValid =
+//       currentQuestion.text &&
+//       currentQuestion.choices.every((c) => c.trim()) &&
+//       currentQuestion.correctIndices.length > 0;
+
+//     let finalQuestions = [...questions];
+//     if (isCurrentQuestionValid) {
+//       finalQuestions.push(currentQuestion);
+//     }
+//     if (finalQuestions.length === 0) {
+//       alert("Add at least one valid question.");
+//       return;
+//     }
+//     onSave({ questions: finalQuestions });
+//   };
+
+//   const removeQuestion = (index: number) => {
+//     setQuestions(questions.filter((_, i) => i !== index));
+//   };
+
+//   return (
+//     <div className="max-w-4xl mx-auto p-6 space-y-6">
+//       <Card className="p-6 shadow-md">
+//         <h2 className="text-xl font-semibold mb-4">Add Questions ({questions.length})</h2>
+
+//         {/* Question Editor */}
+//         <Editor
+//           apiKey="0gn1nl2pcgdtjpnb3b8iyodwu7az8ldbkqxpa75qztjwti0q" // Make sure to use your own API key
+//           key={questions.length} // reset after add
+//          // initialValue={currentQuestion.text}
+//           onEditorChange={handleEditorChange}
+//           init={{
+//             height: 200,
+//             menubar: false,
+//             plugins: "link lists image code fullscreen",
+//             toolbar:
+//               "undo redo | bold italic | alignleft aligncenter alignright | bullist numlist | link image | fullscreen | code",
+//           }}
+//         />
+
+//         {/* Time Limit */}
+//         <div className="mt-4">
+//           <label>Time Limit (sec): </label>
+//           <Input
+//             type="number"
+//             name="timeLimitSec"
+//             value={currentQuestion.timeLimitSec}
+//             onChange={handleInputChange}
+//             min={5}
+//             max={180}
+//           />
+//         </div>
+
+//         {/* Choices */}
+//         <div className="mt-4 space-y-2">
+//           {currentQuestion.choices.map((c, i) => (
+//             <div key={i} className="flex items-center space-x-2">
+//               <Checkbox
+//                 checked={currentQuestion.correctIndices.includes(i)}
+//                 onCheckedChange={() => toggleCorrectAnswer(i)}
+//               />
+//               <Input
+//                 value={c}
+//                 onChange={(e) => handleChoiceChange(i, e.target.value)}
+//                 placeholder={`Option ${i + 1}`}
+//               />
+//             </div>
+//           ))}
+//         </div>
+
+//         {/* Buttons */}
+//         <div className="mt-6 flex space-x-4">
+//           <Button onClick={addQuestion}>
+//             <Plus className="mr-2 h-4 w-4" /> Add Question
+//           </Button>
+//           <Button variant="outline" onClick={endQuiz}>
+//             End Quiz and Create Room
+//           </Button>
+//         </div>
+//       </Card>
+
+//       {/* Questions List */}
+//       {questions.length > 0 && (
+//         <Card className="p-4 shadow-md">
+//           <h3 className="font-semibold mb-3">Added Questions</h3>
+//           {questions.map((q, idx) => (
+//             <div key={idx} className="border p-3 rounded mb-2 bg-white">
+//               <div className="flex justify-between items-start">
+//                 <div>
+//                   <div dangerouslySetInnerHTML={{ __html: q.text }} />
+//                   <p className="text-sm text-gray-500">Choices: {q.choices.join(", ")}</p>
+//                   <p className="text-sm text-green-600">
+//                     Correct: {q.correctIndices.map((i) => q.choices[i]).join(", ")}
+//                   </p>
+//                 </div>
+//                 <Button variant="ghost" onClick={() => removeQuestion(idx)}>
+//                   <X className="h-4 w-4" />
+//                 </Button>
+//               </div>
+//             </div>
+//           ))}
+//         </Card>
+//       )}
+//     </div>
+//   );
+// }
+
 import React, { useState } from "react";
 import { Editor } from "@tinymce/tinymce-react";
 import { Button } from "./components/ui/button";
@@ -1187,19 +1361,28 @@ import { Card } from "./components/ui/card";
 import { Checkbox } from "./components/ui/checkbox";
 import { Plus, X } from "lucide-react";
 
-interface Question {
+/* ================= TYPES ================= */
+
+export interface Question {
   text: string;
   choices: string[];
   correctIndices: number[];
   timeLimitSec: number;
 }
 
-interface QuizCreatorProps {
-  onSave: (quizData: { questions: Question[] }) => void;
+interface QuizEditorProps {
+  onSave: (quizData: { title: string, description: string, questions: Question[] }) => void;
 }
 
-export default function QuizCreator({ onSave }: QuizCreatorProps) {
+/* ================= COMPONENT ================= */
+
+export default function QuizEditor({ onSave }: QuizEditorProps) {
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [quizDetails, setQuizDetails] = useState({
+    title: "",
+    description: "",
+  });
+
   const [currentQuestion, setCurrentQuestion] = useState<Question>({
     text: "",
     choices: ["", "", "", ""],
@@ -1207,30 +1390,50 @@ export default function QuizCreator({ onSave }: QuizCreatorProps) {
     timeLimitSec: 15,
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  /* ================= HANDLERS ================= */
+
+  const handleDetailsChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    if (name === "timeLimitSec") {
-      setCurrentQuestion((prev) => ({ ...prev, timeLimitSec: Number(value) }));
-    }
+    setQuizDetails((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleEditorChange = (content: string) => {
-    setCurrentQuestion((prev) => ({ ...prev, text: content }));
+    setCurrentQuestion((prev) => ({
+      ...prev,
+      text: content,
+    }));
   };
 
   const handleChoiceChange = (index: number, value: string) => {
-    const newChoices = [...currentQuestion.choices];
-    newChoices[index] = value;
-    setCurrentQuestion((prev) => ({ ...prev, choices: newChoices }));
+    const updatedChoices = [...currentQuestion.choices];
+    updatedChoices[index] = value;
+
+    setCurrentQuestion((prev) => ({
+      ...prev,
+      choices: updatedChoices,
+    }));
   };
 
   const toggleCorrectAnswer = (index: number) => {
-    const { correctIndices } = currentQuestion;
-    const newCorrectIndices = correctIndices.includes(index)
-      ? correctIndices.filter((i) => i !== index)
-      : [...correctIndices, index];
-    setCurrentQuestion((prev) => ({ ...prev, correctIndices: newCorrectIndices }));
+    setCurrentQuestion((prev) => ({
+      ...prev,
+      correctIndices: prev.correctIndices.includes(index)
+        ? prev.correctIndices.filter((i) => i !== index)
+        : [...prev.correctIndices, index],
+    }));
   };
+
+  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCurrentQuestion((prev) => ({
+      ...prev,
+      timeLimitSec: Number(e.target.value),
+    }));
+  };
+
+  /* ================= ACTIONS ================= */
 
   const addQuestion = () => {
     if (
@@ -1238,44 +1441,83 @@ export default function QuizCreator({ onSave }: QuizCreatorProps) {
       currentQuestion.choices.some((c) => !c.trim()) ||
       currentQuestion.correctIndices.length === 0
     ) {
-      alert("Fill in question, all choices, and select at least one correct answer.");
+      alert("Fill question, all options, and select correct answer(s)");
       return;
     }
-    setQuestions([...questions, currentQuestion]);
-    setCurrentQuestion({ text: "", choices: ["", "", "", ""], correctIndices: [], timeLimitSec: 15 });
+
+    setQuestions((prev) => [...prev, currentQuestion]);
+
+    setCurrentQuestion({
+      text: "",
+      choices: ["", "", "", ""],
+      correctIndices: [],
+      timeLimitSec: 15,
+    });
+  };
+
+  const removeQuestion = (index: number) => {
+    setQuestions((prev) => prev.filter((_, i) => i !== index));
   };
 
   const endQuiz = () => {
-    const isCurrentQuestionValid =
+    const isCurrentValid =
       currentQuestion.text &&
       currentQuestion.choices.every((c) => c.trim()) &&
       currentQuestion.correctIndices.length > 0;
 
-    let finalQuestions = [...questions];
-    if (isCurrentQuestionValid) {
-      finalQuestions.push(currentQuestion);
-    }
+    const finalQuestions = isCurrentValid
+      ? [...questions, currentQuestion]
+      : [...questions];
+
     if (finalQuestions.length === 0) {
-      alert("Add at least one valid question.");
+      alert("Add at least one valid question");
       return;
     }
-    onSave({ questions: finalQuestions });
+    if (!quizDetails.title) {
+      alert("Please enter a title for the quiz.");
+      return;
+    }
+
+    onSave({ ...quizDetails, questions: finalQuestions });
   };
 
-  const removeQuestion = (index: number) => {
-    setQuestions(questions.filter((_, i) => i !== index));
-  };
+  /* ================= UI ================= */
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <Card className="p-6 shadow-md">
-        <h2 className="text-xl font-semibold mb-4">Add Questions ({questions.length})</h2>
+    <div className="max-w-4xl mx-auto space-y-6">
+      <Card className="p-6">
+        <h2 className="text-xl font-semibold mb-4">
+         Create Quiz
+        </h2>
+        <div className="mb-4">
+          <label className="block mb-1 font-medium">
+            Title
+          </label>
+          <Input
+            name="title"
+            value={quizDetails.title}
+            onChange={handleDetailsChange}
+          />
+        </div>
+        <div className="mb-4">
+          <label className="block mb-1 font-medium">
+            Description
+          </label>
+          <Input
+            name="description"
+            value={quizDetails.description}
+            onChange={handleDetailsChange}
+          />
+        </div>
+
+        <h2 className="text-xl font-semibold mb-4">
+          Add Questions ({questions.length})
+        </h2>
 
         {/* Question Editor */}
         <Editor
-          apiKey="0gn1nl2pcgdtjpnb3b8iyodwu7az8ldbkqxpa75qztjwti0q" // Make sure to use your own API key
-          key={questions.length} // reset after add
-         // initialValue={currentQuestion.text}
+          apiKey="0gn1nl2pcgdtjpnb3b8iyodwu7az8ldbkqxpa75qztjwti0q"
+          value={currentQuestion.text}
           onEditorChange={handleEditorChange}
           init={{
             height: 200,
@@ -1288,60 +1530,74 @@ export default function QuizCreator({ onSave }: QuizCreatorProps) {
 
         {/* Time Limit */}
         <div className="mt-4">
-          <label>Time Limit (sec): </label>
+          <label className="block mb-1 font-medium">
+            Time Limit (seconds)
+          </label>
           <Input
             type="number"
-            name="timeLimitSec"
-            value={currentQuestion.timeLimitSec}
-            onChange={handleInputChange}
             min={5}
             max={180}
+            value={currentQuestion.timeLimitSec}
+            onChange={handleTimeChange}
           />
         </div>
 
-        {/* Choices */}
+        {/* Options */}
         <div className="mt-4 space-y-2">
-          {currentQuestion.choices.map((c, i) => (
-            <div key={i} className="flex items-center space-x-2">
+          {currentQuestion.choices.map((choice, i) => (
+            <div key={i} className="flex items-center gap-2">
               <Checkbox
                 checked={currentQuestion.correctIndices.includes(i)}
                 onCheckedChange={() => toggleCorrectAnswer(i)}
               />
               <Input
-                value={c}
-                onChange={(e) => handleChoiceChange(i, e.target.value)}
                 placeholder={`Option ${i + 1}`}
+                value={choice}
+                onChange={(e) => handleChoiceChange(i, e.target.value)}
               />
             </div>
           ))}
         </div>
 
         {/* Buttons */}
-        <div className="mt-6 flex space-x-4">
+        <div className="mt-6 flex gap-4">
           <Button onClick={addQuestion}>
             <Plus className="mr-2 h-4 w-4" /> Add Question
           </Button>
           <Button variant="outline" onClick={endQuiz}>
-            End Quiz and Create Room
+            End Quiz & Host
           </Button>
         </div>
       </Card>
 
-      {/* Questions List */}
+      {/* Added Questions */}
       {questions.length > 0 && (
-        <Card className="p-4 shadow-md">
+        <Card className="p-4">
           <h3 className="font-semibold mb-3">Added Questions</h3>
+
           {questions.map((q, idx) => (
-            <div key={idx} className="border p-3 rounded mb-2 bg-white">
+            <div
+              key={idx}
+              className="border p-3 rounded mb-2 bg-white"
+            >
               <div className="flex justify-between items-start">
                 <div>
-                  <div dangerouslySetInnerHTML={{ __html: q.text }} />
-                  <p className="text-sm text-gray-500">Choices: {q.choices.join(", ")}</p>
+                  <div
+                    dangerouslySetInnerHTML={{ __html: q.text }}
+                  />
+                  <p className="text-sm text-gray-500">
+                    Options: {q.choices.join(", ")}
+                  </p>
                   <p className="text-sm text-green-600">
-                    Correct: {q.correctIndices.map((i) => q.choices[i]).join(", ")}
+                    Correct:{" "}
+                    {q.correctIndices.map((i) => q.choices[i]).join(", ")}
                   </p>
                 </div>
-                <Button variant="ghost" onClick={() => removeQuestion(idx)}>
+
+                <Button
+                  variant="ghost"
+                  onClick={() => removeQuestion(idx)}
+                >
                   <X className="h-4 w-4" />
                 </Button>
               </div>

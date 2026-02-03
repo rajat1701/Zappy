@@ -1,142 +1,383 @@
-import { randomUUID } from "crypto";
-import jwt from "jsonwebtoken";
+// import { randomUUID } from "crypto";
 
+// const rooms = new Map();
+
+// export function initGameSockets(io) {
+//   io.on("connection", (socket) => {
+//     console.log("✅ Socket connected:", socket.id);
+
+//     socket.on("host:create_room", ({ quiz }) => {
+//       const roomCode = (Math.random().toString(36).slice(2, 6)).toUpperCase();
+//       rooms.set(roomCode, {
+//         hostId: socket.id,
+//         quiz,
+//         players: new Map(),
+//         currentQ: -1,
+//         endsAt: null
+//       });
+//       socket.join(roomCode);
+//       io.to(socket.id).emit("host:room_created", { roomCode });
+//       console.log("Room created", roomCode);
+//     });
+
+//     socket.on("player:join", ({ roomCode, name }) => {
+//       const room = rooms.get(roomCode);
+//       if (!room) return io.to(socket.id).emit("error", { message: "Room not found" });
+//       room.players.set(socket.id, { name, score: 0, answered: false });
+//       socket.join(roomCode);
+//       io.to(roomCode).emit("host:players_update", { players: Array.from(room.players.values()) });
+//       io.to(roomCode).emit("lobby:update", { count: room.players.size });
+//     });
+
+//     socket.on("host:next_question", ({ roomCode }) => {
+//       const room = rooms.get(roomCode);
+//       if (!room || socket.id !== room.hostId) return;
+//       room.currentQ += 1;
+//       if (room.currentQ >= room.quiz.questions.length) {
+//         const leaderboard = makeLeaderboard(room);
+//         io.to(roomCode).emit("game:over", { leaderboard });
+//         return;
+//       }
+//       const q = room.quiz.questions[room.currentQ];
+//       for (const p of room.players.values()) p.answered = false;
+//       const now = Date.now();
+//       room.endsAt = now + (q.timeLimitSec || 20) * 1000;
+//       io.to(roomCode).emit("question:start", {
+//         index: room.currentQ,
+//         text: q.text,
+//         choices: q.choices,
+//         endsAt: room.endsAt
+//       });
+//       setTimeout(() => endQuestion(io, roomCode), (q.timeLimitSec || 20) * 1000 + 200);
+//     });
+
+//     // socket.on("player:answer", ({ roomCode, choiceIndex }) => {
+//     //   const room = rooms.get(roomCode);
+//     //   if (!room) return;
+//     //   const q = room.quiz.questions[room.currentQ];
+//     //   const player = room.players.get(socket.id);
+//     //   if (!player || player.answered) return;
+//     //   player.answered = true;
+//     //   const timeLeftMs = Math.max(0, room.endsAt - Date.now());
+//     //   const correct = choiceIndex === q.correctIndex;
+//     //   if (correct) {
+//     //     const bonus = Math.floor(timeLeftMs / 50);
+//     //     player.score += 1000 + bonus;
+//     //   }
+//     //   io.to(socket.id).emit("player:answer_result", { correct });
+//     //   io.to(room.hostId).emit("host:leaderboard", makeLeaderboard(room));
+//     // });
+
+
+//     socket.on("player:answer", ({ roomCode, choiceIndex }) => {
+//   const room = rooms.get(roomCode);
+//   if (!room) return;
+//   const q = room.quiz.questions[room.currentQ];
+//   const player = room.players.get(socket.id);
+//   if (!player || player.answered) return;
+//   player.answered = true;
+//   const timeLeftMs = Math.max(0, room.endsAt - Date.now());
+
+//   // FIX: Check if the player's choiceIndex is included in the array of correctIndices
+//   // This logic now supports multiple correct answers
+//   const correct = q.correctIndices.includes(Number(choiceIndex));
+
+//   if (correct) {
+//     const bonus = Math.floor(timeLeftMs / 50);
+//     player.score += 1000 + bonus;
+//   }
+//   io.to(socket.id).emit("player:answer_result", { correct });
+//   io.to(room.hostId).emit("host:leaderboard", makeLeaderboard(room));
+// });
+
+//     socket.on("disconnect", () => {
+//       for (const [code, room] of rooms.entries()) {
+//         if (room.hostId === socket.id) {
+//           rooms.delete(code);
+//           io.to(code).emit("game:closed");
+//         } else if (room.players.has(socket.id)) {
+//           room.players.delete(socket.id);
+//           io.to(code).emit("host:players_update", { players: Array.from(room.players.values()) });
+//         }
+//       }
+//     });
+//   });
+// }
+
+// // function endQuestion(io, roomCode) {
+// //   const room = rooms.get(roomCode);
+// //   if (!room) return;
+// //   const q = room.quiz.questions[room.currentQ];
+// //   io.to(roomCode).emit("question:end", { correctIndex: q.correctIndex, leaderboard: makeLeaderboard(room) });
+// // }
+
+// function endQuestion(io, roomCode) {
+//     const room = rooms.get(roomCode);
+//     if (!room) return;
+//     const q = room.quiz.questions[room.currentQ];
+//     // Send the entire array of correct indices to the client for display
+//     io.to(roomCode).emit("question:end", { correctIndices: q.correctIndices, leaderboard: makeLeaderboard(room) });
+//     console.log("correctIndices = ",q.correctIndices);
+// }
+
+// function makeLeaderboard(room) {
+//   return Array.from(room.players.values())
+//     .map(p => ({ name: p.name, score: p.score }))
+//     .sort((a,b)=>b.score-a.score);
+// }
+
+
+
+import { randomUUID } from "crypto";
+import Quiz from "../models/Quiz.js";
 const rooms = new Map();
 
 export function initGameSockets(io) {
   io.on("connection", (socket) => {
     console.log("✅ Socket connected:", socket.id);
 
-    // 🎮 Host creates a room (must be logged in)
-    socket.on("host:create_room", ({ quiz, token }) => {
-      try {
-        // ✅ Verify JWT
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        if (decoded.role !== "host") {
-          io.to(socket.id).emit("error", { message: "Unauthorized: Only hosts can create rooms." });
-          return;
-        }
+    // socket.on("host:create_room", ({ quiz }) => {
+    //   const roomCode = (Math.random().toString(36).slice(2, 6)).toUpperCase();
+    //   rooms.set(roomCode, {
+    //     hostId: socket.id,
+    //     quiz,
+    //     players: new Map(),
+    //     currentQ: -1,
+    //     endsAt: null
+    //   });
+    //   socket.join(roomCode);
+    //   io.to(socket.id).emit("host:room_created", { roomCode });
+    //   console.log("Room created", roomCode);
+    // });
 
-        // ✅ Generate a room code
-        const roomCode = (Math.random().toString(36).slice(2, 6)).toUpperCase();
 
-        rooms.set(roomCode, {
-          hostId: socket.id,
-          hostUserId: decoded.id,
-          quiz,
-          players: new Map(),
-          currentQ: -1,
-          endsAt: null
-        });
 
-        socket.join(roomCode);
-        io.to(socket.id).emit("host:room_created", { roomCode });
-        console.log(`🎯 Room created by ${decoded.id}: ${roomCode}`);
-      } catch (err) {
-        console.error("❌ Room creation error:", err.message);
-        io.to(socket.id).emit("error", { message: "Invalid or expired token." });
-      }
+// socket.on("host:create_room", async ({ quizId }) => {
+//   try {
+//     const quiz = await Quiz.findById(quizId).populate("questions");
+//     console.log(quiz);
+    
+//     if (!quiz || !quiz.questions.length) {
+//       return socket.emit("error", { message: "Invalid quiz" });
+//     }
+
+//     const roomCode = Math.random().toString(36).slice(2, 6).toUpperCase();
+
+//     rooms.set(roomCode, {
+//       hostId: socket.id,
+//       quiz,
+//       players: new Map(),
+//       currentQ: -1,
+//       endsAt: null
+//     });
+
+//     socket.join(roomCode);
+//     socket.emit("host:room_created", { roomCode });
+
+//     console.log("Room created with saved quiz:", roomCode);
+//   } catch (err) {
+//     console.error(err);
+//     socket.emit("error", { message: "Failed to host quiz" });
+//   }
+// });
+
+// socket.on("host:create_room", async ({ quizId }) => {
+//   try {
+//     const quiz = await Quiz.findById(quizId);
+// console.log("Original Quiz:", quiz);
+//     if (!quiz || !quiz.questions?.length) {
+//       console.log("entered");
+//       return socket.emit("error", { message: "Invalid quiz" });
+//     }
+
+//     const normalizedQuiz = {
+//       id: quiz.id,
+//       title: quiz.title,
+//       questions: quiz.questions.map(q => ({
+//         text: q.text,
+//         choices: q.choices,
+//         correctIndices: [q.correctIndex],
+//         timeLimitSec: q.timeLimitSec
+//       }))
+//     };
+//     console.log("Normalized Quiz:", normalizedQuiz);
+//     const roomCode = Math.random().toString(36).slice(2, 6).toUpperCase();
+
+//     rooms.set(roomCode, {
+//       hostId: socket.id,
+//       quiz: normalizedQuiz,
+//       players: new Map(),
+//       currentQ: -1,
+//       endsAt: null
+//     });
+
+//     socket.join(roomCode);
+//     socket.emit("host:room_created", { roomCode });
+
+//     console.log("Room created:", roomCode);
+//   } catch (err) {
+//     console.error(err);
+//     socket.emit("error", { message: "Failed to host quiz" });
+//   }
+// });
+socket.on("host:create_room", async ({ quizId }) => {
+  try {
+    if (!quizId || typeof quizId !== "string") {
+      return socket.emit("error", {
+        message: "Invalid quiz id received"
+      });
+    }
+
+    const quiz = await Quiz.findById(quizId);
+
+    if (!quiz || !quiz.questions.length) {
+      return socket.emit("error", {
+        message: "Quiz not found or has no questions"
+      });
+    }
+
+    const roomCode = Math.random().toString(36).slice(2, 6).toUpperCase();
+
+    rooms.set(roomCode, {
+      hostId: socket.id,
+      quiz,
+      players: new Map(),
+      currentQ: -1,
+      endsAt: null
     });
 
-    // 👥 Player joins room (no login needed)
+    socket.join(roomCode);
+    socket.emit("host:room_created", { roomCode });
+
+  } catch (err) {
+    console.error("Create room failed:", err);
+    socket.emit("error", { message: "Failed to create room" });
+  }
+});
+
+
+
+// socket.on("host:create_room", ({ quizID }) => {
+//   // ✅ Defensive check
+//   if (!quiz || !Array.isArray(quiz.questions)) {
+//     console.error("Invalid quiz received", quiz);
+//     return;
+//   }
+
+//   const roomCode = Math.random().toString(36).slice(2, 6).toUpperCase();
+
+//   rooms.set(roomCode, {
+//     hostId: socket.id,
+//     quiz: {
+//       questions: quiz.questions, // ✅ already populated
+//     },
+//     players: new Map(),
+//     currentQ: -1,
+//     endsAt: null,
+//   });
+
+//   socket.join(roomCode);
+
+//   io.to(socket.id).emit("host:room_created", { roomCode });
+//   console.log("Room created", roomCode);
+// });
+
+
+
+
     socket.on("player:join", ({ roomCode, name }) => {
       const room = rooms.get(roomCode);
-      if (!room) {
-        io.to(socket.id).emit("error", { message: "Room not found" });
-        return;
-      }
-
+      if (!room) return io.to(socket.id).emit("error", { message: "Room not found" });
       room.players.set(socket.id, { name, score: 0, answered: false });
       socket.join(roomCode);
-
       io.to(roomCode).emit("host:players_update", { players: Array.from(room.players.values()) });
       io.to(roomCode).emit("lobby:update", { count: room.players.size });
-
-      console.log(`👤 Player joined: ${name} (${socket.id}) Room: ${roomCode}`);
     });
 
-    // ⏭ Host moves to next question
     socket.on("host:next_question", ({ roomCode }) => {
       const room = rooms.get(roomCode);
       if (!room || socket.id !== room.hostId) return;
-
       room.currentQ += 1;
       if (room.currentQ >= room.quiz.questions.length) {
         const leaderboard = makeLeaderboard(room);
         io.to(roomCode).emit("game:over", { leaderboard });
         return;
       }
-
       const q = room.quiz.questions[room.currentQ];
       for (const p of room.players.values()) p.answered = false;
-
       const now = Date.now();
       room.endsAt = now + (q.timeLimitSec || 20) * 1000;
-
-      const hasMultipleAnswers = q.correctIndices && q.correctIndices.length > 1;
+      
+      // Determine if it's a multiple-answer question
+      const hasMultipleAnswers = q.correctIndices && q.correctIndices.length > 1; 
 
       io.to(roomCode).emit("question:start", {
         index: room.currentQ,
         text: q.text,
         choices: q.choices,
         endsAt: room.endsAt,
-        hasMultipleAnswers
+        hasMultipleAnswers // Send this flag to the players
       });
-
       setTimeout(() => endQuestion(io, roomCode), (q.timeLimitSec || 20) * 1000 + 200);
     });
 
-    // ✅ Player submits answer
     socket.on("player:answer", ({ roomCode, choiceIndices }) => {
       const room = rooms.get(roomCode);
       if (!room) return;
-
       const q = room.quiz.questions[room.currentQ];
       const player = room.players.get(socket.id);
       if (!player || player.answered) return;
-
       player.answered = true;
       const timeLeftMs = Math.max(0, room.endsAt - Date.now());
 
-      const playerAnswers = Array.isArray(choiceIndices)
+      // Ensure choiceIndices is always an array of numbers
+      const playerAnswers = Array.isArray(choiceIndices) 
         ? choiceIndices.map(Number).sort((a, b) => a - b)
         : [Number(choiceIndices)];
 
+      let correct = false;
       let scoreEarned = 0;
 
       if (q.correctIndices && q.correctIndices.length > 0) {
+        // Calculate correct and incorrect answers
         const correctChoices = playerAnswers.filter(idx => q.correctIndices.includes(idx));
         const incorrectChoices = playerAnswers.filter(idx => !q.correctIndices.includes(idx));
-
-        const isFullyCorrect =
-          correctChoices.length === q.correctIndices.length && incorrectChoices.length === 0;
+        
+        // Full score if all correct answers are chosen and no incorrect ones
+        const isFullyCorrect = correctChoices.length === q.correctIndices.length && incorrectChoices.length === 0;
 
         if (isFullyCorrect) {
+          correct = true;
           const bonus = Math.floor(timeLeftMs / 50);
           scoreEarned = 1000 + bonus;
         } else if (correctChoices.length > 0) {
+          // Partial scoring for some correct answers
           const pointsPerCorrect = 1000 / q.correctIndices.length;
           scoreEarned = pointsPerCorrect * correctChoices.length;
         }
       }
-
+      
       player.score += scoreEarned;
 
+      // io.to(socket.id).emit("player:answer_result", { correct: scoreEarned > 0 });
+      // io.to(room.hostId).emit("host:leaderboard", makeLeaderboard(room));
+
       io.to(socket.id).emit("player:answer_result", { correct: scoreEarned > 0 });
-      io.to(room.hostId).emit("host:leaderboard", makeLeaderboard(room));
+
+// Send live leaderboard to everyone (host + players)
+const leaderboard = makeLeaderboard(room);
+io.to(roomCode).emit("leaderboard:update", { leaderboard });
+
     });
 
-    // ❌ Disconnect handling
     socket.on("disconnect", () => {
       for (const [code, room] of rooms.entries()) {
         if (room.hostId === socket.id) {
           rooms.delete(code);
           io.to(code).emit("game:closed");
-          console.log(`⚠️ Room ${code} closed (host disconnected)`);
         } else if (room.players.has(socket.id)) {
           room.players.delete(socket.id);
           io.to(code).emit("host:players_update", { players: Array.from(room.players.values()) });
-          console.log(`👋 Player left (${socket.id}) from room ${code}`);
         }
       }
     });
@@ -146,13 +387,9 @@ export function initGameSockets(io) {
 function endQuestion(io, roomCode) {
   const room = rooms.get(roomCode);
   if (!room) return;
-
   const q = room.quiz.questions[room.currentQ];
-  io.to(roomCode).emit("question:end", {
-    correctIndices: q.correctIndices,
-    leaderboard: makeLeaderboard(room)
-  });
-  console.log("✅ Question ended:", q.text);
+  io.to(roomCode).emit("question:end", { correctIndices: q.correctIndices, leaderboard: makeLeaderboard(room) });
+  console.log("correctIndices = ", q.correctIndices);
 }
 
 function makeLeaderboard(room) {

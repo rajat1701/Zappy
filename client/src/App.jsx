@@ -218,7 +218,10 @@ import Navigation from "./components/Navigation";
 import { Button } from "./components/ui/button";
 import { motion } from "framer-motion";
 import { useEffect } from "react";
+import ProtectedRoute from "./ProtectedRoute";
 import confetti from "canvas-confetti";
+import Login from "./Login";
+import Register from "./Register";
 
 export default function App() {
   return (
@@ -226,7 +229,17 @@ export default function App() {
       <Navigation />
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/host" element={<HostGame />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        {/* <Route path="/host" element={<HostGame />} /> */}
+        <Route
+          path="/host"
+          element={
+            <ProtectedRoute>
+              <HostGame />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/join" element={<JoinGame />} />
         <Route path="/play/:code" element={<PlayerGame />} />
       </Routes>
